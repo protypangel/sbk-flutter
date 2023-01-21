@@ -1,37 +1,39 @@
 import 'package:flutter/material.dart';
-import 'package:sbkiz/view/animation/animation_container.dart';
 
-typedef SwapEventListener = void Function(Key swap);
+import 'canvas.dart';
 
-
+// ignore: must_be_immutable
 class AnimationBuilder extends StatefulWidget {
-  final List<CanvasContainer> containers;
-  final SwapEventListener ?event;
+  late List<CanvasBuilder> canvasBuilder;
+  late Key beginWith;
+  final _AnimationBuilderState _state = _AnimationBuilderState();
 
-  const AnimationBuilder
+  AnimationBuilder
   ({
-    super.key, 
-    required this.containers,
-    this.event
-  });
-  @override State<AnimationBuilder> createState() => _AnimationBuilderState();
-  CanvasContainer getCurrentFromKey(Key key) {
-    event!(key);
-    try {
-      return containers.firstWhere((container) => container.key == key);
-    } on StateError catch(e) {
-      //TODO Try to catch this error
-      throw StateError(e.toString());
-    }
+    super.key,
+    Key ?beginWith,
+    required List<Canvas> canvas
+  }) {
+    canvasBuilder = canvas.map(build).toList();
+    this.beginWith = beginWith ?? canvas.first.key; 
+  }
+
+  // ignore: no_logic_in_create_state
+  @override State<AnimationBuilder> createState() => _state;
+  
+  CanvasBuilder updateCurrentFromKey(Key key) {
+    return canvasBuilder.firstWhere((canvas) => canvas.key == key);
+  }
+  CanvasBuilder build (Canvas canvas) {
+    return CanvasBuilder.build(canvas, (key) => _state.updateCurrentFromKey(key));
   }
 }
 
 class _AnimationBuilderState extends State<AnimationBuilder> {
-  late CanvasContainer current;
-
+  late CanvasBuilder current;
   @override
   void initState() {
-    current = widget.containers.first;
+    current = widget.updateCurrentFromKey(widget.beginWith);
     super.initState();
   }
 
@@ -45,13 +47,16 @@ class _AnimationBuilderState extends State<AnimationBuilder> {
     RenderBox? box = context.findRenderObject() as RenderBox?;
 
     if (box == null) return;
-    box.globalToLocal(event.localPosition);
+    Offset offset = box.globalToLocal(event.localPosition);
 
-    Key? key = current.getKey(event.localPosition);
+    Key? key = current.swapEvent(offset);
     if (key == null) return;
 
+    updateCurrentFromKey(key);
+  }
+  void updateCurrentFromKey(Key key) {
     setState(() {
-      current = widget.getCurrentFromKey(key);
+      current = widget.updateCurrentFromKey(key);
     });
   }
 }
