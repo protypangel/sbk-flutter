@@ -20,11 +20,12 @@ class AnimationCanvas extends Canvas {
 class AnimationCanvasPainter extends material.CustomPainter {
   final PainterAnimation painter;
   double pourcentage = 0;
+  int boucle = 0;
   AnimationCanvasPainter({
     required this.painter
   });
   @override bool shouldRepaint(covariant material.CustomPainter oldDelegate) => false;
-  @override void paint(material.Canvas canvas, material.Size size) => painter(pourcentage, canvas, size);
+  @override void paint(material.Canvas canvas, material.Size size) => painter(boucle, pourcentage, canvas, size);
 }
 
 class AnimationCanvasBuilder extends CanvasBuilder {
@@ -62,40 +63,54 @@ class AnimationCanvasBuilder extends CanvasBuilder {
   @override
   material.Key? swapEvent(material.Offset offset) {
     if (swapAnimation == null) return null;
-    return swapAnimation!(painter.pourcentage, offset);
+    return swapAnimation!(painter.boucle, painter.pourcentage, offset);
   }
 }
+typedef BoucleUpdate = void Function();
+typedef UpdateTimer = void Function(Timer timer);
 class _AnimationCanvasBuilderState extends material.State<AnimationCanvasBuilder> {
   late Timer timer;
   late int tickMax;
+  int tick = 1;
+  late BoucleUpdate update;
   @override void initState() {
     if(widget.duration.inMilliseconds < widget.fps) throw Exception("Duration is lower than a frame");
 
     tickMax = widget.duration.inMilliseconds ~/ widget.fps + 1;
-
+    update = () {
+      widget.painter.pourcentage = tick / (tickMax - 1);
+      tick = (tick + 1) % tickMax;
+      update = () {
+        setState(() {
+          widget.painter.pourcentage = tick / (tickMax - 1);
+          if (tick == 0) widget.painter.boucle++;
+          tick = (tick + 1) % tickMax;
+        });
+      };
+      setState(() {});
+    };
+    UpdateTimer t;
     if (widget.repeat) {
-      timer = Timer.periodic(Duration(milliseconds: 1000 ~/ widget.fps), (timer) {
-        update(timer.tick);
-      });
-    }
-    else if (widget.keyAfterFinished == null) {
-      timer = Timer.periodic(Duration(milliseconds: 1000 ~/ widget.fps), (timer) {
+      t = (timer) => update();
+    } else if (widget.keyAfterFinished == null) {
+      t = (timer) {
         if(timer.tick > tickMax) {
           timer.cancel();
           return;
         }
-        update(timer.tick);
-      });
+        update();
+      };
     } else {
-      timer = Timer.periodic(Duration(milliseconds: 1000 ~/ widget.fps), (timer) {
+      t = (timer) {
         if(timer.tick > tickMax) {
           timer.cancel();
           widget.swapAfterFinished(widget.keyAfterFinished!);
           return;
         }
-        update(timer.tick);
-      });
+        update();
+      }; 
     }
+    timer = Timer.periodic(Duration(milliseconds: 1000 ~/ widget.fps), t);
     super.initState();
   }
   @override void dispose() {
@@ -110,12 +125,5 @@ class _AnimationCanvasBuilderState extends material.State<AnimationCanvasBuilder
       painter: widget.painter,
       size: widget.size
     );
-  }
-  
-  void update(int tick) {
-    setState(() {
-      int tick = (timer.tick - 1) % tickMax;
-      widget.painter.pourcentage = tick / (tickMax - 1);
-    });
   }
 }

@@ -9,7 +9,7 @@ class StaticCanvas extends Canvas {
     required super.paint,
     super.size = const material.Size(double.maxFinite, double.maxFinite),
   }) : super(
-    paintAnimation: (pourcentage, canvas, size) {},
+    paintAnimation: (boucle, pourcentage, canvas, size) {},
   );
 }
 

@@ -38,7 +38,7 @@ class _MainState extends State<Main> {
   @override
   Widget build(BuildContext context) {
     return AnimationBuilder(
-      beginWith: key2,
+      beginWith: key3,
       canvas: [
         StaticCanvas(
           key: key1,
@@ -51,20 +51,39 @@ class _MainState extends State<Main> {
           key: key2,
           repeat: true,
           keyAfterFinished: key3,
-          swapAnimation: (pourcentage, position) => key1,
+          swapAnimation: (boucle, pourcentage, position) => key1,
           duration: const Duration(seconds: 3),
-          paintAnimation: (pourcentage, canvas, size) {
+          paintAnimation: (boucle, pourcentage, canvas, size) {
             double a = size.width * pourcentage;
             canvas.drawRect(Rect.fromLTRB(0, 0, a, 10), Paint()..color = const Color.fromRGBO(0, 255, 0, 1.0));
           }
         ),
         AnimationCanvas(
+          fps: 60,
           key: key3,
+          repeat: true,
           duration: const Duration(seconds: 3),
           keyAfterFinished: key2,
-          swapAnimation: (pourcentage, position) => pourcentage < 1 ? null : key1,
-          paintAnimation: (pourcentage, canvas, size) {
-            canvas.drawRect(Rect.fromLTRB(0, 0, pourcentage * size.width, 10), Paint()..color = const Color.fromRGBO(0, 0, 255, 1.0));
+          swapAnimation: (boucle, pourcentage, position) => key2,
+          paintAnimation: (boucle, pourcentage, canvas, size) {
+            TextPainter painter = TextPainter(
+              textAlign: TextAlign.center,
+              textDirection: TextDirection.ltr,
+              text: TextSpan(
+                text: boucle.toString(),
+                style: TextStyle(fontWeight: FontWeight.w900, color: Colors.black, fontSize: 14)
+              )
+            )..layout();
+            painter.paint(canvas, Offset(0,10));
+            canvas.drawRect(
+              Rect.fromLTRB(0, 0, pourcentage * size.width, 10), 
+              Paint()..color = Color.fromRGBO(
+                0,
+                boucle % 2 == 0 ? 255: 0,
+                boucle % 2 == 0 ? 0: 255, 
+                1.0
+              )
+            );
           }
         )
       ],
